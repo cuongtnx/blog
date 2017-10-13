@@ -3,7 +3,7 @@
 from __future__ import unicode_literals
 
 AUTHOR = 'Cuong Tran'
-SITENAME = "cuongtn's collective essays"
+SITENAME = 'My Blog'
 SITEURL = ''
 
 PATH = 'content'
@@ -31,4 +31,4 @@ DEFAULT_PAGINATION = 5
 # Uncomment following line if you want document-relative URLs when developing
 #RELATIVE_URLS = True
 
-THEME = 'themes/attila'
+THEME = 'themes/monospace'
