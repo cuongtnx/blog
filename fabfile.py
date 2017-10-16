@@ -1,92 +1,147 @@
 from fabric.api import *
-import fabric.contrib.project as project
-import os
-import shutil
-import sys
-import SocketServer
+from fabric.contrib.console import confirm
+from fabric.contrib.files import exists
 
-from pelican.server import ComplexHTTPRequestHandler
 
-# Local path configuration (can be absolute or relative to fabfile)
-env.deploy_path = 'output'
-DEPLOY_PATH = env.deploy_path
+####################
+# CONFIGS
+####################
+# Global variables
+LOCAL_USER = 'cuongtn'
+REMOTE_USER = 'cuongtn'
+ROOT = 'root'
+SERVER_IP = '138.197.130.199'
 
-# Remote server configuration
-production = 'root@localhost:22'
-dest_path = '/var/www'
+PROJECT_LOCAL_DIR = '/home/%s/working/blog' % LOCAL_USER
+PROJECT_REMOTE_DIR = '/home/%s/blog' % REMOTE_USER
+PROJECT_URL = 'https://github.com/cuongtnx/blog.git'
 
-# Rackspace Cloud Files configuration settings
-env.cloudfiles_username = 'my_rackspace_username'
-env.cloudfiles_api_key = 'my_rackspace_api_key'
-env.cloudfiles_container = 'my_cloudfiles_container'
+NGINX_FROM = '%s/deployment/blog.conf' % PROJECT_REMOTE_DIR
+NGINX_TO = '/etc/nginx/conf.d/blog.conf'
+VIRTUALENV_REMOTE = '/home/%s/blog/env' % REMOTE_USER
 
-# Github Pages configuration
-env.github_pages_branch = "gh-pages"
 
-# Port for `serve`
-PORT = 8000
+# ENVIRONMENT setup
+env.hosts = [SERVER_IP]
+env.nginx_from = NGINX_FROM
+env.nginx_to = NGINX_TO
+env.project_dir = PROJECT_REMOTE_DIR
+env.project_local_dir = PROJECT_LOCAL_DIR
+env.project_url = PROJECT_URL
+env.user = REMOTE_USER
+env.virtualenv_remote = VIRTUALENV_REMOTE
 
-def clean():
-    """Remove generated files"""
-    if os.path.isdir(DEPLOY_PATH):
-        shutil.rmtree(DEPLOY_PATH)
-        os.makedirs(DEPLOY_PATH)
 
-def build():
-    """Build local version of site"""
-    local('pelican -s pelicanconf.py')
+####################
+# TASKS
+####################
+def _secure_ssh():
+    env.user = ROOT
+    run('adduser %s' % REMOTE_USER)
+    run('usermod -aG sudo %s' % REMOTE_USER)  # make sudo user
+    # generate ssh key
+    #   if already have a ssh_key
+    #   and enable ssh in Digital Ocean, which means password ssh has
+    #   already been disabled
+    ssh_folder = '/home/%s/.ssh' % REMOTE_USER
+    run('mkdir -p %s' % ssh_folder)
+    sudo('chown %s %s' % (REMOTE_USER, ssh_folder))
+    sudo('chmod 700 %s' % ssh_folder)
+    put('~/.ssh/id_rsa_learn.pub', '%s/authorized_keys' % ssh_folder, mode=755)
+    sudo('chown %s %s/authorized_keys' % (REMOTE_USER, ssh_folder))
 
-def rebuild():
-    """`build` with the delete switch"""
-    local('pelican -d -s pelicanconf.py')
+    #   if doesn't have ssh_key
+    #   if doesn't enable ssh in Digital Ocean
+    #       just use ssh-copy-id REMOTE_USER@SERVER_PI
+    #       disable password authentication
+    # disable root login
+    # run('sed -i 's:RootLogin yes:RootLogin no:' /etc/ssh/sshd_config')
+    # run('service ssh restart')
+    env.user = REMOTE_USER
 
-def regenerate():
-    """Automatically regenerate site upon file modification"""
-    local('pelican -r -s pelicanconf.py')
 
-def serve():
-    """Serve site at http://localhost:8000/"""
-    os.chdir(env.deploy_path)
+def _install_packages():
+    sudo('apt-get update')
+    sudo('apt-get upgrade -y')
+    sudo('apt-get install -y python3 python3-pip')
+    sudo('apt-get install -y git-core nginx postgresql memcached supervisor')
+    sudo('apt-get install -y\
+            build-essential libssl-dev libffi-dev python3-dev')
+    sudo('pip3 install -U pip')
+    sudo('pip3 install -U virtualenv')
 
-    class AddressReuseTCPServer(SocketServer.TCPServer):
-        allow_reuse_address = True
 
-    server = AddressReuseTCPServer(('', PORT), ComplexHTTPRequestHandler)
+def _push_changes():
+    local('git push origin master')
 
-    sys.stderr.write('Serving on port {0} ...\n'.format(PORT))
-    server.serve_forever()
 
-def reserve():
-    """`build`, then `serve`"""
-    build()
-    serve()
+def _clone_project():
+    if exists(env.project_dir):
+        with cd(env.project_dir):
+            run('git pull origin master')
+    else:
+        run('git clone %s' % env.project_url)
 
-def preview():
-    """Build production version of site"""
-    local('pelican -s publishconf.py')
 
-def cf_upload():
-    """Publish to Rackspace Cloud Files"""
-    rebuild()
-    with lcd(DEPLOY_PATH):
-        local('swift -v -A https://auth.api.rackspacecloud.com/v1.0 '
-              '-U {cloudfiles_username} '
-              '-K {cloudfiles_api_key} '
-              'upload -c {cloudfiles_container} .'.format(**env))
+def _set_up_virtualenv():
+    if (exists(env.virtualenv_remote) and
+            confirm('Virtualenv already exists, would you like to replace it?')):
+        run('rm -rf %s' % env.virtualenv_remote)
+    else:
+        run('virtualenv -p python3 %s' % env.virtualenv_remote)
 
-@hosts(production)
-def publish():
-    """Publish to production via rsync"""
-    local('pelican -s publishconf.py')
-    project.rsync_project(
-        remote_dir=dest_path,
-        exclude=".DS_Store",
-        local_dir=DEPLOY_PATH.rstrip('/') + '/',
-        delete=True,
-        extra_opts='-c',
-    )
+    _virtualenv('pip install -r requirements.txt')
 
-def gh_pages():
-    """Publish to GitHub Pages"""
-    rebuild()
-    local("ghp-import -b {github_pages_branch} {deploy_path} -p".format(**env))
+
+def _virtualenv(command):
+    """
+    Wrapper to run command inside the virtualenv environment
+    """
+    with cd(env.project_dir):
+        with prefix('source %s/bin/activate' % env.virtualenv_remote):
+            run(command)
+
+
+def _run_project_tasks():
+    _virtualenv('pelican -d -s publishconf.py')
+
+
+def _update_nginx():
+    sudo('cp %s %s' % (env.nginx_from, env.nginx_to))
+    sudo('service nginx restart')
+
+
+def _setup_nginx():
+    sudo('rm /etc/nginx/sites-enabled/default')
+    _update_nginx()
+
+
+####################
+# INTERFACES
+####################
+def setup():
+    """
+    Setup new VPS server
+        1. Add new sudo user, enable ssh login and disable ssh-ing with root
+        2. Install required packages to run a Python web server
+    """
+    # Currently, the first task is performed directly by SSH-ing into server
+    # as root. But in the future, these should be automated.
+    # _secure_ssh()
+    _install_packages()
+
+
+def create():
+    _setup_nginx()
+
+
+def deploy():
+    """
+    Deployment tasks
+        1. Run local tasks
+    """
+    _push_changes()
+    _clone_project()
+    _set_up_virtualenv()
+    _run_project_tasks()
+    _update_nginx()
