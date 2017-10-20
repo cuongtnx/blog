@@ -5,5 +5,5 @@ sys.path.append(os.curdir)
 
 from pelicanconf import *
 
-SITEURL = 'http://cuongtn.xyz'
+SITEURL = 'https://cuongtn.xyz'
 RELATIVE_URLS = False
