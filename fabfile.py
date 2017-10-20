@@ -20,7 +20,6 @@ NGINX_FROM = '%s/deployment/blog.conf' % PROJECT_REMOTE_DIR
 NGINX_TO = '/etc/nginx/conf.d/blog.conf'
 VIRTUALENV_REMOTE = '/home/%s/blog/env' % REMOTE_USER
 
-
 # ENVIRONMENT setup
 env.hosts = [SERVER_IP]
 env.nginx_from = NGINX_FROM
