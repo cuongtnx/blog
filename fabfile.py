@@ -142,7 +142,7 @@ def new():
     from datetime import date
     file_date = str(date.today())
     file_title = prompt("What is your entry's title?")
-    file_slug = "-".join(file_title.split(" "))
+    file_slug = "-".join(file_title.lower().split(" "))
     file_header = """Title: %s\nDate: %s\n""" % (file_title, file_date)
 
     with open("%s/%s-%s.md" % (PATH, file_date, file_slug), 'w') as f:
