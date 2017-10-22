@@ -1,25 +1,14 @@
 from fabric.api import *
 from fabric.contrib.console import confirm
 from fabric.contrib.files import exists
+from fabric.operations import prompt
+
+from publishconf import *
 
 
 ####################
 # CONFIGS
 ####################
-# Global variables
-LOCAL_USER = 'cuongtn'
-REMOTE_USER = 'cuongtn'
-ROOT = 'root'
-SERVER_IP = '138.197.130.199'
-
-PROJECT_LOCAL_DIR = '/home/%s/working/blog' % LOCAL_USER
-PROJECT_REMOTE_DIR = '/home/%s/blog' % REMOTE_USER
-PROJECT_URL = 'https://github.com/cuongtnx/blog.git'
-
-NGINX_FROM = '%s/deployment/blog.conf' % PROJECT_REMOTE_DIR
-NGINX_TO = '/etc/nginx/conf.d/blog.conf'
-VIRTUALENV_REMOTE = '/home/%s/blog/env' % REMOTE_USER
-
 # ENVIRONMENT setup
 env.hosts = [SERVER_IP]
 env.nginx_from = NGINX_FROM
@@ -144,3 +133,18 @@ def deploy():
     _set_up_virtualenv()
     _run_project_tasks()
     _update_nginx()
+
+
+def new():
+    """
+    Create new file with header
+    """
+    from datetime import date
+    file_date = str(date.today())
+    file_title = prompt("What is your entry's title?")
+    file_slug = "-".join(file_title.split(" "))
+    file_header = """Title: %s\nDate: %s\n""" % (file_title, file_date)
+
+    with open("%s/%s-%s.md" % (PATH, file_date, file_slug), 'w') as f:
+        f.write(file_header)
+        f.close()

@@ -1,21 +1,12 @@
 # Cuongtn's blog
 
-## Guide
+## Fab commands:
 
-Generate contents using the `publishconf` file.
+`setup`: setup Digital Ocean server
 
-`pelican -s publishconf.py`
+`create`: setup Nginx
 
-The static version is located in a different folder; thus need to copy contents from current `output` folder into the proper `output` folder; commit & push.
+`deploy`: well, deploy
 
-```
-cp -r output ~/blog
+`new`: create new blog entry
 
-cd ~/blog/output
-
-git add .
-
-git commit -m "updated blog"
-
-git push origin master
-```
