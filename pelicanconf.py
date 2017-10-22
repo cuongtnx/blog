@@ -1,5 +1,5 @@
 AUTHOR = 'Cuong Tran'
-SITENAME = 'Blog'
+SITENAME = 'Cuong Tran\'s Blog'
 SITEURL = 'http://localhost:8000/'
 
 # Uncomment following line if you want document-relative URLs when developing
@@ -19,12 +19,14 @@ AUTHOR_FEED_ATOM = None
 AUTHOR_FEED_RSS = None
 
 # Blogroll
-LINKS = (('Pelican', 'http://getpelican.com/'),)
+LINKS = ()
 
 # Social widget
-SOCIAL = (('You can add links in your config file', '#'),
-          ('Another social link', '#'),)
+SOCIAL = (('Github', 'https://github.com/cuongtnx'))
 
 DEFAULT_PAGINATION = 5
 
 THEME = 'themes/monospace'
+
+DISQUS_SITENAME = 'cuongtnxyz'
+GOOGLE_ANALYTICS = 'UA-68611018-3'
