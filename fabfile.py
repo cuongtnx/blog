@@ -48,6 +48,11 @@ def _secure_ssh():
     env.user = REMOTE_USER
 
 
+def _create_folders():
+    log_folder = 'home/%s/logs/blog' % REMOTE_USER
+    run('mkdir -p %s' % log_folder)
+
+
 def _install_packages():
     sudo('apt-get update')
     sudo('apt-get upgrade -y')
@@ -116,7 +121,8 @@ def setup():
     # Currently, the first task is performed directly by SSH-ing into server
     # as root. But in the future, these should be automated.
     # _secure_ssh()
-    _install_packages()
+    _create_folders()
+    # _install_packages()
 
 
 def create():
