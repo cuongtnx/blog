@@ -72,10 +72,10 @@ def _clone_project():
 
 
 def _set_up_virtualenv():
-    if (exists(env.virtualenv_remote) and
-            confirm('Virtualenv already exists, would you like to replace it?')):
+    if not exists(env.virtualenv_remote):
+        run('virtualenv -p python3 %s' % env.virtualenv_remote)
+    elif confirm('Virtualenv already exists, would you like to replace it?'):
         run('rm -rf %s' % env.virtualenv_remote)
-    else:
         run('virtualenv -p python3 %s' % env.virtualenv_remote)
 
     _virtualenv('pip install -r requirements.txt')

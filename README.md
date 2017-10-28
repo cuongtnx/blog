@@ -9,4 +9,3 @@
 `deploy`: well, deploy
 
 `new`: create new blog entry
-
