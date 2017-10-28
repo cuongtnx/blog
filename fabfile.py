@@ -49,7 +49,7 @@ def _secure_ssh():
 
 
 def _create_folders():
-    log_folder = 'home/%s/logs/blog' % REMOTE_USER
+    log_folder = '/home/%s/logs/blog' % REMOTE_USER
     run('mkdir -p %s' % log_folder)
 
 
